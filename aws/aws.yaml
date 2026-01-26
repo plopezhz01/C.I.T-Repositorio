@@ -1,0 +1,456 @@
+AWSTemplateFormatVersion: '2026-01-26'
+Description: 'CloudFormation template for multi-AZ AWS architecture with ALB, ASG, and RDS - Student Edition'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    Description: Environment name prefix
+  
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: Latest Amazon Linux 2 AMI ID
+
+Resources:
+  # ==================== VPC ====================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.7.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc'
+
+  # ==================== INTERNET GATEWAY ====================
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-igw'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # ==================== PUBLIC SUBNETS ====================
+  PublicSubnetAZA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet-a'
+
+  PublicSubnetAZB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet-b'
+
+  PublicSubnetAZC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.3.0/24
+      AvailabilityZone: !Select [2, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet-c'
+
+  # ==================== PRIVATE SUBNETS ====================
+  PrivateSubnetAZA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.4.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-a'
+
+  PrivateSubnetAZB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.5.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-b'
+
+  PrivateSubnetAZC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.7.6.0/24
+      AvailabilityZone: !Select [2, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-c'
+
+  # ==================== NAT GATEWAYS ====================
+  ElasticIPNATGateway:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat-eip-a'
+
+  NATGatewayAZA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt ElasticIPNATGateway.AllocationId
+      SubnetId: !Ref PublicSubnetAZA
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-nat-gateway-a'
+
+  # ==================== ROUTE TABLES ====================
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetAZA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetAZB
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetAZC
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-rt'
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGatewayAZA
+
+  PrivateSubnetRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetAZA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetAZB
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetRouteTableAssociationC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetAZC
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ==================== SECURITY GROUPS ====================
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Bastion host
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-bastion-sg'
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS from anywhere
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb-sg'
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Web Servers
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: HTTP from ALB
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: HTTPS from ALB
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref BastionSecurityGroup
+          Description: SSH from Bastion
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-webserver-sg'
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref WebServerSecurityGroup
+          Description: MySQL from Web Servers
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: All outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds-sg'
+
+  # ==================== BASTION HOST ====================
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      SubnetId: !Ref PublicSubnetAZA
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-bastion'
+
+  # ==================== APPLICATION LOAD BALANCER ====================
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${EnvironmentName}-alb'
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref PublicSubnetAZA
+        - !Ref PublicSubnetAZB
+        - !Ref PublicSubnetAZC
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-alb'
+
+  # ==================== TARGET GROUP ====================
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${EnvironmentName}-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-tg'
+
+  # ==================== ALB LISTENER ====================
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ==================== LAUNCH TEMPLATE ====================
+  WebServerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${EnvironmentName}-web-lt'
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: t3.micro
+        SecurityGroupIds:
+          - !Ref WebServerSecurityGroup
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Web Server $(hostname -f)</h1>" > /var/www/html/index.html
+
+  # ==================== AUTO SCALING GROUP ====================
+  WebServerAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub '${EnvironmentName}-asg'
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnetAZA
+        - !Ref PrivateSubnetAZB
+        - !Ref PrivateSubnetAZC
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebServerLaunchTemplate
+        Version: !GetAtt WebServerLaunchTemplate.LatestVersionNumber
+      MinSize: 3
+      MaxSize: 6
+      DesiredCapacity: 3
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-web-server'
+          PropagateAtLaunch: true
+
+  # ==================== RDS SUBNET GROUP ====================
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS
+      SubnetIds:
+        - !Ref PrivateSubnetAZA
+        - !Ref PrivateSubnetAZB
+        - !Ref PrivateSubnetAZC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds-subnet-group'
+
+  # ==================== RDS INSTANCE ====================
+  RDSDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-mysql-db'
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: Mysqlpass123
+      AllocatedStorage: 20
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      StorageEncrypted: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds'
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${EnvironmentName}-vpc-id'
+
+  LoadBalancerDNS:
+    Description: DNS name of the load balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${EnvironmentName}-alb-dns'
+
+  BastionPublicIP:
+    Description: Public IP of the Bastion host
+    Value: !GetAtt BastionInstance.PublicIp
+    Export:
+      Name: !Sub '${EnvironmentName}-bastion-ip'
+
+  RDSEndpoint:
+    Description: RDS endpoint
+    Value: !GetAtt RDSDatabase.Endpoint.Address
+    Export:
+      Name: !Sub '${EnvironmentName}-rds-endpoint'
+
+  AutoScalingGroupName:
+    Description: Auto Scaling Group name
+    Value: !Ref WebServerAutoScalingGroup
+    Export:
+      Name: !Sub '${EnvironmentName}-asg-name'
