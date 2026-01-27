@@ -3,7 +3,7 @@
 Plugin Name: C.I.P Tickets (BD soporte)
 Description: Gestiona tickets usando una base de datos externa llamada "soporte" (tablas cliente/administrador/ticket).
 Version: 1.0
-Author: ASIR2 | Grupo7
+Author: ASIR2 - Grupo7
 */
 
 if ( ! defined('ABSPATH') ) exit;
@@ -83,7 +83,7 @@ add_action('admin_menu', function () {
   SOPORTE_CAP,
   'soporte-tickets', 
   'soporte_render_tickets',
-  'dashicons-sos',
+  'dashicons-tickets-alt',
   26
 );
 
