@@ -369,7 +369,14 @@ function soporte_render_ticket_edit() {
     if ( isset($_GET['updated']) ) $msg = 'Cambios guardados.';
     if ( isset($_GET['closed']) ) $msg = 'Ticket cerrado.';
 
+
     echo '<div class="wrap soporte-wrap"><h1>Editar ticket #' . esc_html($ticket->id_ticket) . '</h1>';
+
+    // Botón volver
+    $back_url = admin_url('admin.php?page=soporte-tickets');
+    echo '<p style="margin: 10px 0;">';
+    echo '<a class="button" href="' . esc_url($back_url) . '">← Volver</a>';
+    echo '</p>';
 
     if ($msg) {
         echo '<div class="notice notice-success"><p>' . esc_html($msg) . '</p></div>';
