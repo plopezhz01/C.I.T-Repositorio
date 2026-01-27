@@ -1,0 +1,86 @@
+# Apache Configuration for Soporte Tickets System
+
+# Habilitar el motor de reescritura
+RewriteEngine On
+
+# Redirigir a HTTPS (opcional, descomentar si tienes SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevenir acceso directo a archivos de configuración
+<FilesMatch "^(config\.php)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger archivos sensibles
+<FilesMatch "\.(sql|md|log|ini)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Permitir acceso solo a archivos PHP, CSS, JS e imágenes
+<FilesMatch "\.(php|css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Configuración de PHP
+<IfModule mod_php7.c>
+    # Aumentar tiempo de sesión
+    php_value session.gc_maxlifetime 7200
+    
+    # Configuración de subida de archivos (por si se implementa en el futuro)
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    
+    # Deshabilitar información de PHP
+    php_flag display_errors Off
+    php_flag display_startup_errors Off
+    
+    # Para desarrollo, cambiar a On
+    # php_flag display_errors On
+    # php_flag display_startup_errors On
+</IfModule>
+
+# Páginas de error personalizadas (opcional)
+# ErrorDocument 404 /soporte_tickets/404.php
+# ErrorDocument 500 /soporte_tickets/500.php
+
+# Habilitar compresión
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
+</IfModule>
+
+# Cache para archivos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
+# Seguridad adicional
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # Prevenir XSS
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Política de referencia
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Seguir enlaces simbólicos
+Options +FollowSymLinks
