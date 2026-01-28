@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Configuración de la base de datos
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'soporte.cpick8cz8rta.us-east-1.rds.amazonaws.com');
 define('DB_USER', 'root');
 define('DB_PASS', 'Gruposiete');
 define('DB_NAME', 'soporte');
