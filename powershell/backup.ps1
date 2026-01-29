@@ -29,7 +29,6 @@ $ARCHIVO_ZIP = "$ARCHIVO_SQL.gz"
 # PASO 2: HACER BACKUP DE LA BASE DE DATOS
 ################################################################################
 
-Write-Host "=== INICIANDO BACKUP ===" -ForegroundColor Green
 Write-Host "Base de datos: $RDS_DATABASE"
 Write-Host "Fecha: $FECHA"
 Write-Host ""
@@ -62,13 +61,7 @@ Write-Host "[2/3] Comprimiendo archivo..."
 # Comprimir con gzip (debes tener gzip instalado)
 gzip $ARCHIVO_SQL
 
-if (Test-Path $ARCHIVO_ZIP) {
-    $tamaño = [math]::Round((Get-Item $ARCHIVO_ZIP).Length / 1MB, 2)
-    Write-Host "✓ Comprimido: $ARCHIVO_ZIP ($tamaño MB)" -ForegroundColor Green
-} else {
-    Write-Host "✗ Error al comprimir" -ForegroundColor Red
-    exit 1
-}
+
 
 ################################################################################
 # PASO 4: SUBIR A S3
@@ -104,7 +97,6 @@ Write-Host ""
 Write-Host "=== BACKUP COMPLETADO EXITOSAMENTE ===" -ForegroundColor Green
 Write-Host "Archivo de backup: backup_$FECHA.sql.gz"
 Write-Host "Ubicación S3: $s3_path"
-Write-Host ""
 #
 #░░░░░░░░▄▄██▀▀▀▀▀▀▀████▄▄▄▄░░░░░░░░░░░░░
 #░░░░░▄██▀░░░░░░░░░░░░░░░░░▀▀██▄▄░░░░░░░░
