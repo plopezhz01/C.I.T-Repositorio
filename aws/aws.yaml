@@ -1,19 +1,22 @@
-AWSTemplateFormatVersion: '2026-01-26'
-Description: 'CloudFormation template for multi-AZ AWS architecture with ALB, ASG, and RDS - Student Edition'
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'CloudFormation template for multi-AZ AWS architecture with ALB, ASG  - Student Edition'
 
 Parameters:
+
   EnvironmentName:
     Type: String
     Default: production
     Description: Environment name prefix
-  
+
   LatestAmiId:
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
-    Description: Latest Amazon Linux 2 AMI ID
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
 Resources:
+
   # ==================== VPC ====================
+
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -25,6 +28,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-vpc'
 
   # ==================== INTERNET GATEWAY ====================
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -39,6 +43,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
 
   # ==================== PUBLIC SUBNETS ====================
+
   PublicSubnetAZA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -73,6 +78,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-public-subnet-c'
 
   # ==================== PRIVATE SUBNETS ====================
+
   PrivateSubnetAZA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -104,6 +110,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-private-subnet-c'
 
   # ==================== NAT GATEWAYS ====================
+
   ElasticIPNATGateway:
     Type: AWS::EC2::EIP
     DependsOn: AttachGateway
@@ -123,6 +130,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-nat-gateway-a'
 
   # ==================== ROUTE TABLES ====================
+
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -191,6 +199,7 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
 
   # ==================== SECURITY GROUPS ====================
+
   BastionSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -263,31 +272,15 @@ Resources:
         - Key: Name
           Value: !Sub '${EnvironmentName}-webserver-sg'
 
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          SourceSecurityGroupId: !Ref WebServerSecurityGroup
-          Description: MySQL from Web Servers
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-          Description: All outbound traffic
-      Tags:
-        - Key: Name
-          Value: !Sub '${EnvironmentName}-rds-sg'
 
   # ==================== BASTION HOST ====================
+
   BastionInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: t3.micro
+      KeyName: lock
       SubnetId: !Ref PublicSubnetAZA
       SecurityGroupIds:
         - !Ref BastionSecurityGroup
@@ -296,6 +289,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-bastion'
 
   # ==================== APPLICATION LOAD BALANCER ====================
+
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -314,6 +308,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-alb'
 
   # ==================== TARGET GROUP ====================
+
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -334,6 +329,7 @@ Resources:
           Value: !Sub '${EnvironmentName}-tg'
 
   # ==================== ALB LISTENER ====================
+
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -345,6 +341,7 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
 
   # ==================== LAUNCH TEMPLATE ====================
+
   WebServerLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -352,18 +349,40 @@ Resources:
       LaunchTemplateData:
         ImageId: !Ref LatestAmiId
         InstanceType: t3.micro
+        KeyName: lock
         SecurityGroupIds:
           - !Ref WebServerSecurityGroup
         UserData:
-          Fn::Base64: |
+          Fn::Base64: !Sub |
             #!/bin/bash
+            set -e
             yum update -y
-            yum install -y httpd
+
+            yum install -y httpd php php-cli php-pdo php-mysqli php-pdo_mysql php-json php-mbstring git
+
+            cd /tmp
+            git clone https://github.com/plopezhz01/C.I.T-Repositorio.git
+            
+
+            cp -r /tmp/C.I.T-Repositorio/apache\ files/* /var/www/html/
+            
+            
+            # ==================== SET PERMISSIONS ====================
+            echo "[$(date)] Setting Apache permissions..."
+            chown -R apache:apache /var/www/html
+            chmod -R 755 /var/www/html
+            chmod -R 755 /var/www/html/includes
+            chmod 644 /var/www/html/includes/*.php
+            
+            # ==================== START APACHE ====================
+            echo "[$(date)] Starting Apache..."
             systemctl start httpd
             systemctl enable httpd
-            echo "<h1>Web Server $(hostname -f)</h1>" > /var/www/html/index.html
+            
+            echo "[$(date)] UserData script completed successfully"
 
   # ==================== AUTO SCALING GROUP ====================
+
   WebServerAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -387,44 +406,10 @@ Resources:
           Value: !Sub '${EnvironmentName}-web-server'
           PropagateAtLaunch: true
 
-  # ==================== RDS SUBNET GROUP ====================
-  RDSSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Subnet group for RDS
-      SubnetIds:
-        - !Ref PrivateSubnetAZA
-        - !Ref PrivateSubnetAZB
-        - !Ref PrivateSubnetAZC
-      Tags:
-        - Key: Name
-          Value: !Sub '${EnvironmentName}-rds-subnet-group'
 
-  # ==================== RDS INSTANCE ====================
-  RDSDatabase:
-    Type: AWS::RDS::DBInstance
-    DeletionPolicy: Snapshot
-    Properties:
-      DBInstanceIdentifier: !Sub '${EnvironmentName}-mysql-db'
-      DBInstanceClass: db.t3.micro
-      Engine: mysql
-      MasterUsername: admin
-      MasterUserPassword: Mysqlpass123
-      AllocatedStorage: 20
-      StorageType: gp2
-      VPCSecurityGroups:
-        - !Ref RDSSecurityGroup
-      DBSubnetGroupName: !Ref RDSSubnetGroup
-      MultiAZ: false
-      BackupRetentionPeriod: 7
-      PreferredBackupWindow: '03:00-04:00'
-      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
-      StorageEncrypted: false
-      Tags:
-        - Key: Name
-          Value: !Sub '${EnvironmentName}-rds'
 
 Outputs:
+
   VPCId:
     Description: VPC ID
     Value: !Ref VPC
@@ -443,14 +428,15 @@ Outputs:
     Export:
       Name: !Sub '${EnvironmentName}-bastion-ip'
 
-  RDSEndpoint:
-    Description: RDS endpoint
-    Value: !GetAtt RDSDatabase.Endpoint.Address
-    Export:
-      Name: !Sub '${EnvironmentName}-rds-endpoint'
 
   AutoScalingGroupName:
     Description: Auto Scaling Group name
     Value: !Ref WebServerAutoScalingGroup
     Export:
       Name: !Sub '${EnvironmentName}-asg-name'
+
+  EC2KeyPairName:
+    Description: EC2 Key Pair name used
+    Value: lock
+    Export:
+      Name: !Sub '${EnvironmentName}-keypair-name'
