@@ -1,19 +1,19 @@
 ################################################################################
-#
+#Version alfa script powershell - c.i.t grupo7
 ################################################################################
 
 # Datos de tu RDS
-$RDS_HOST = "tu-rds.eu-west-1.rds.amazonaws.com"
+$RDS_HOST = "soporte(hay que cambiarlo).rds.amazonaws.com"
 $RDS_USER = "root"
-$RDS_PASSWORD = "tu_contraseña"
-$RDS_DATABASE = "nombre_base_datos"
+$RDS_PASSWORD = "Gruposiete" #Hay que hasearlo por seguridad
+$RDS_DATABASE = "soporte"
 
 # Datos de tu S3
-$S3_BUCKET = "tu-bucket-backups"
-$S3_REGION = "eu-west-1"
+$S3_BUCKET = "hay que poner aqui el arn del s3"
+$S3_REGION = "us-east-1"
 
 # Carpeta donde guardar backups
-$BACKUP_FOLDER = "C:\backups"
+$BACKUP_FOLDER = "/backups" #La carpeta tendra que tener acceso restringido
 
 # Crear carpeta si no existe
 if (-not (Test-Path $BACKUP_FOLDER)) {
