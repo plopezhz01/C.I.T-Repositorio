@@ -19,16 +19,16 @@ define('SOPORTE_CAP', 'soporte_manage');
  * Credenciales BD externa (mejor en wp-config.php en real)
  */
 if ( ! defined('SOPORTE_DB_NAME') ) define('SOPORTE_DB_NAME', 'soporte');
-if ( ! defined('SOPORTE_DB_USER') ) define('SOPORTE_DB_USER', 'soporte_user');
+if ( ! defined('SOPORTE_DB_USER') ) define('SOPORTE_DB_USER', 'root');
 if ( ! defined('SOPORTE_DB_PASS') ) define('SOPORTE_DB_PASS', 'Gruposiete');
-if ( ! defined('SOPORTE_DB_HOST') ) define('SOPORTE_DB_HOST', 'localhost');
+if ( ! defined('SOPORTE_DB_HOST') ) define('SOPORTE_DB_HOST', 'soporte.cpick8cz8rta.us-east-1.rds.amazonaws.com');
 
 global $soporte_db;
 
 /** ====== ACTIVACIÓN: rol/cap ====== */
 register_activation_hook(__FILE__, function () {
     // Rol para “admin1/admin2…”
-    add_role('soporte_user', 'C.I.P Tickets', [
+    add_role('root', 'C.I.P Tickets', [
         'read' => true,
         SOPORTE_CAP => true,
     ]);
@@ -41,14 +41,17 @@ register_activation_hook(__FILE__, function () {
 
 /** ====== CONEXIÓN BD ====== */
 function soporte_init_db_connection() {
-    global $soporte_db;
-    $soporte_db = new wpdb(
-        SOPORTE_DB_USER,
-        SOPORTE_DB_PASS,
-        SOPORTE_DB_NAME,
-        SOPORTE_DB_HOST
-    );
+  global $soporte_db;
+  $soporte_db = new wpdb(
+    SOPORTE_DB_USER,
+    SOPORTE_DB_PASS,
+    SOPORTE_DB_NAME,
+    SOPORTE_DB_HOST
+  );
+
+  $soporte_db->suppress_errors(false);
 }
+
 add_action('plugins_loaded', 'soporte_init_db_connection');
 
 /** ====== ESTILOS ADMIN ====== */
@@ -187,10 +190,14 @@ function soporte_render_tickets() {
 
   echo '<div class="wrap soporte-wrap"><h1>Tickets</h1><div class="soporte-card">';
 
-  if ( empty($soporte_db) || $soporte_db->get_var('SELECT 1') != 1 ) {
-    echo '<div class="notice notice-error"><p>No se puede conectar a la BD soporte.</p></div></div></div>';
-    return;
-  }
+  $ping = $soporte_db->get_var('SELECT 1');
+    if ( (int)$ping !== 1 ) {
+      echo '<div class="notice notice-error"><p>Error BD soporte: '
+        . esc_html($soporte_db->last_error ?: 'mira wp-content/debug.log')
+        . '</p></div></div></div>';
+      return;
+    }
+
 
   $s       = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
   $filter  = isset($_GET['filter']) ? sanitize_key($_GET['filter']) : 'todo';
@@ -303,15 +310,15 @@ function soporte_render_tickets() {
     // Fila clicable
     echo '<tr class="soporte-row-link" data-href="' . esc_url($edit_url) . '">';
     echo '<th scope="row" class="check-column"><input type="checkbox" name="ids[]" value="'.esc_attr($t->id_ticket).'"></th>';
-    echo '<td>' . esc_html($t->id_ticket) . '</td>';
-    echo '<td>' . esc_html($t->cliente ?? '') . '</td>';
-    echo '<td>' . esc_html($t->admin ?? '') . '</td>';
-    echo '<td>' . esc_html($t->titulo ?? '') . '</td>';
-    echo '<td>' . esc_html($t->descripcion ?? '') . '</td>';
-    echo '<td>' . soporte_badge($t->prioridad ?? '', 'prioridad') . '</td>';
-    echo '<td>' . soporte_badge($t->estado ?? '', 'estado') . '</td>';
-    echo '<td>' . esc_html($t->fecha_creado ?? '') . '</td>';
-    echo '<td>' . esc_html($t->fecha_resuelto ?? '') . '</td>';
+    echo '<td data-label="ID">' . esc_html($t->id_ticket) . '</td>';
+    echo '<td data-label="Cliente">' . esc_html($t->cliente ?? '') . '</td>';
+    echo '<td data-label="Admin">' . esc_html($t->admin ?? '') . '</td>';
+    echo '<td data-label="Titulo">' . esc_html($t->titulo ?? '') . '</td>';
+    echo '<td data-label="Descripción">' . esc_html($t->descripcion ?? '') . '</td>';
+    echo '<td data-label="Prioridad">' . soporte_badge($t->prioridad ?? '', 'prioridad') . '</td>';
+    echo '<td data-label="Estado">' . soporte_badge($t->estado ?? '', 'estado') . '</td>';
+    echo '<td data-label="Creado">' . esc_html($t->fecha_creado ?? '') . '</td>';
+    echo '<td data-label="Resuelto">' . esc_html($t->fecha_resuelto ?? '') . '</td>';
     echo '</tr>';
   }
 } else {
@@ -650,15 +657,15 @@ function soporte_render_archivados() {
     foreach ($tickets as $t) {
       echo '<tr>';
         echo '<th scope="row" class="check-column"><input type="checkbox" name="ids[]" value="'.esc_attr($t->id_ticket).'"></th>';
-        echo '<td>' . esc_html($t->id_ticket) . '</td>';
-        echo '<td>' . esc_html($t->cliente ?? '') . '</td>';
-        echo '<td>' . esc_html($t->admin ?? '') . '</td>';
-        echo '<td>' . esc_html($t->titulo ?? '') . '</td>';
-        echo '<td>' . esc_html($t->descripcion ?? '') . '</td>';
-        echo '<td>' . soporte_badge($t->prioridad ?? '', 'prioridad') . '</td>';
-        echo '<td>' . soporte_badge($t->estado ?? '', 'estado') . '</td>';
-        echo '<td>' . esc_html($t->fecha_creado ?? '') . '</td>';
-        echo '<td>' . esc_html($t->fecha_resuelto ?? '') . '</td>';
+        echo '<td data-label="ID">' . esc_html($t->id_ticket) . '</td>';
+        echo '<td data-label="Cliente">' . esc_html($t->cliente ?? '') . '</td>';
+        echo '<td data-label="Admin">' . esc_html($t->admin ?? '') . '</td>';
+        echo '<td data-label="Titulo">' . esc_html($t->titulo ?? '') . '</td>';
+        echo '<td data-label="Descripción">' . esc_html($t->descripcion ?? '') . '</td>';
+        echo '<td data-label="Prioridad">' . soporte_badge($t->prioridad ?? '', 'prioridad') . '</td>';
+        echo '<td data-label="Estado">' . soporte_badge($t->estado ?? '', 'estado') . '</td>';
+        echo '<td data-label="Creado">' . esc_html($t->fecha_creado ?? '') . '</td>';
+        echo '<td data-label="Resuelto">' . esc_html($t->fecha_resuelto ?? '') . '</td>';
       echo '</tr>';
     }
   } else {
@@ -764,11 +771,11 @@ function soporte_render_clientes() {
     if ($clientes) {
         foreach ($clientes as $c) {
             echo '<tr>';
-            echo '<td>' . esc_html($c->id_cliente) . '</td>';
-            echo '<td>' . esc_html($c->nombre) . '</td>';
-            echo '<td>' . esc_html($c->email) . '</td>';
-            echo '<td>' . esc_html($c->telefono) . '</td>';
-            echo '<td>' . esc_html($c->num_tickets) . '</td>';
+            echo '<td data-label="ID">' . esc_html($c->id_cliente) . '</td>';
+            echo '<td data-label="Nombre">' . esc_html($c->nombre) . '</td>';
+            echo '<td data-label="Email">' . esc_html($c->email) . '</td>';
+            echo '<td data-label="Teléfono">' . esc_html($c->telefono) . '</td>';
+            echo '<td data-label="Num Tickets">' . esc_html($c->num_tickets) . '</td>';
             echo '</tr>';
         }
     } else {
