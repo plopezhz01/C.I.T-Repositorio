@@ -9,51 +9,78 @@ Licencia: GPLv2 o posterior
 
 == Descripción ==
 
-Este proyecto es una instalación de WordPress utilizada para el sitio web "C.I.P Support". 
-Incluye el núcleo de WordPress, un tema personalizado y varios plugins adicionales.
+Este proyecto es una instalación de WordPress para el sistema de gestión de tickets "C.I.P Tickets".
+Incluye un plugin personalizado para soporte de tickets y un tema específico del grupo 7 para la interfaz del sitio.
 
 == Estructura de carpetas ==
 
-/wp-admin      Panel de administración de WordPress.
-/wp-includes   Archivos del núcleo de WordPress.
-/wp-content    Contiene temas, plugins y subidas de medios.
-/wp-content/themes   Temas instalados, incluido el tema activo del sitio.
-/wp-content/plugins  Plugins instalados y activos/inactivos.
-/wp-content/uploads  Imágenes, documentos y otros archivos subidos.
+/wordpress
+/wordpress/plugin/soporte-tickets Archivos del plugin personalizado de soporte de tickets.
+/wordpress/temas/grupo7 Archivos del tema utilizado por el proyecto.
+/wordpress/readme.txt Este archivo de información del proyecto.
 
-/wp-config.php Archivo de configuración principal de WordPress.
-/.htaccess     Reglas de servidor web (URLs amigables, seguridad, etc.).
+== Plugin "soporte-tickets" ==
+
+El directorio /plugin/soporte-tickets contiene el código del plugin encargado de la creación, gestión y visualización de tickets de soporte dentro de WordPress.
+Cualquier nueva funcionalidad o corrección del sistema de tickets debe implementarse aquí y documentarse en la sección de historial de cambios.
+
+== Tema "grupo7" ==
+
+El directorio /temas/grupo7 contiene el tema activo del sitio, incluyendo plantillas, hojas de estilo y scripts.
+Las modificaciones de diseño o estructura visual del sitio deben realizarse en este tema y anotarse en el historial de cambios del proyecto.
 
 == Requisitos ==
 
-- PHP 8.0 o superior recomendado.
-- MySQL/MariaDB con soporte para WordPress.
-- Servidor web (Apache, Nginx u otro compatible).
-- Extensiones PHP habituales para WordPress (curl, mbstring, mysqli, etc.).
+PHP 8.0 o superior recomendado.
+
+Servidor web compatible (Apache, Nginx, etc.).
+
+MySQL o MariaDB con soporte para WordPress.
+
+Extensiones PHP habituales para WordPress (mysqli, curl, mbstring, json, etc.).
 
 == Instalación / Despliegue ==
 
-1. Subir todos los archivos al servidor en el directorio público del dominio.
-2. Crear una base de datos vacía para WordPress.
-3. Editar wp-config.php con los datos de conexión a la base de datos.
-4. Acceder a https://ejemplo.com/wp-admin/ para completar el asistente de instalación.
-5. Configurar los enlaces permanentes y los ajustes básicos desde el panel.
+Clonar o descargar este repositorio en el servidor.
+
+Colocar la carpeta wordpress en el directorio público del servidor (por ejemplo, /var/www/html).
+
+Crear una base de datos vacía para "C.I.P Tickets".
+
+Configurar wp-config.php con los datos de conexión a la base de datos y las claves de seguridad.
+
+Acceder a https://192.168.31.84/wp-admin/ y completar la instalación de WordPress.
+
+Activar el tema grupo7 desde Apariencia → Temas.
+
+Activar el plugin soporte-tickets desde Plugins → Instalados.
 
 == Copias de seguridad ==
 
 Se recomienda realizar copias de seguridad periódicas de:
-- Base de datos (todas las tablas de WordPress).
-- Carpeta /wp-content (temas, plugins, uploads).
 
-== Notas adicionales ==
+Base de datos del sitio (todas las tablas de WordPress).
 
-- No modificar archivos del núcleo de WordPress; usar temas hijo o plugins personalizados.
-- Documentar cualquier cambio manual en temas o plugins en este archivo.
-- Registrar aquí versiones, cambios importantes y tareas pendientes.
+Carpeta /wordpress/wp-content, especialmente:
+
+/plugin/soporte-tickets (código del plugin).
+
+/temas/grupo7 (código del tema).
+
+/uploads (archivos subidos por usuarios).
+
+== Buenas prácticas ==
+
+No modificar archivos del núcleo de WordPress; realizar cambios únicamente en el plugin soporte-tickets y en el tema grupo7.
+
+Documentar en este archivo cualquier cambio relevante de código, estructura de base de datos o configuración especial del servidor.
 
 == Historial de cambios ==
 
-1.0.0
-- Instalación inicial de WordPress.
-- Subida del tema personalizado.
-- Instalación de los plugins básicos.
+1.0 (2026-02-09)
+
+Creación del proyecto "C.I.P Tickets".
+
+Añadido plugin personalizado soporte-tickets.
+
+Añadido tema grupo7 como tema principal del sitio.
