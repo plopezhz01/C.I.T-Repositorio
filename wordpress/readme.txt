@@ -1,6 +1,6 @@
 === Proyecto WordPress ===
 
-Nombre del proyecto: Mi Sitio WordPress
+Nombre del proyecto: soporte tickets
 Autor: Nombre del autor o empresa
 Sitio web: https://ejemplo.com
 Versión inicial: 1.0.0
