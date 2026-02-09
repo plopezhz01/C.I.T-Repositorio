@@ -1,0 +1,42 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node
+node_modules/
+npm-debug.log
+
+# PHP
+composer.phar
+/vendor/
+.env
+
+# WordPress
+wp-config.php
+wp-content/uploads/
+
+# Database
+*.sql.bak
+*.db
+
+# Logs
+logs/
+*.log
+
+# Temp
+*.tmp
+*.bak
+
+# AWS
+.aws/
+*.pem
+*.key
+
+# Certificates
+*.crt
+*.cert
