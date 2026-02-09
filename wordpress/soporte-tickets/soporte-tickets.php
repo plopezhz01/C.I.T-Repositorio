@@ -84,7 +84,7 @@ add_action('admin_menu', function () {
   'C.I.P Tickets',
   'C.I.P Tickets',
   SOPORTE_CAP,
-  'soporte-tickets', 
+  'soporte-tickets',
   'soporte_render_tickets',
   'dashicons-tickets-alt',
   26
@@ -804,18 +804,22 @@ add_action('admin_post_soporte_cliente_add', function () {
         wp_die('Faltan campos obligatorios.');
     }
 
-    // Hash de contraseña (para que no quede en claro en la BD)
-    $contrasena = sanitize_text_field($pass_plain);
+    // Hash compatible con password_verify() (login.php)
+    $contrasena_hasheada = password_hash($pass_plain, PASSWORD_DEFAULT);
+
+    if ($contrasena_hasheada === false) {
+        wp_die('Error al generar el hash de la contraseña.');
+    }
 
     $soporte_db->insert(
-    'cliente',
-    [
-        'nombre' => $nombre,
-        'contrasena' => $contrasena,
-        'telefono' => $telefono,
-        'email' => $email,
-    ],
-    ['%s','%s','%s','%s']
+        'cliente',
+        [
+            'nombre'     => $nombre,
+            'contrasena' => $contrasena_hasheada,
+            'telefono'   => $telefono,
+            'email'      => $email,
+        ],
+        ['%s', '%s', '%s', '%s']
     );
 
     wp_redirect(admin_url('admin.php?page=soporte-clientes&client_created=1'));
