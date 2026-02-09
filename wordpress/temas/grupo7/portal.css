@@ -1,0 +1,143 @@
+/* 1. Bloqueo de pantalla y Reset */
+* {
+    box-sizing: border-box !important;
+}
+
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden !important;
+    background: #f8fafc;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.g7-viewport {
+    display: flex;
+    flex-direction: column;
+    height: 100vh !important;
+    width: 100vw !important;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    /* Espacio para la barra de WordPress */
+    padding-top: 32px;
+}
+
+/* 2. Header */
+.g7-bar-header {
+    width: 100%;
+    background-color: #e2e8f0;
+    color: #1e293b;
+    padding: 20px;
+    text-align: center;
+    font-weight: 750;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    z-index: 999;
+}
+
+/* 3. Footer (AJUSTADO: Sube para evitar scroll) */
+.g7-bar-footer {
+    width: 100%;
+    background-color: #e2e8f0;
+    padding: 20px;
+    text-align: center;
+    font-weight: 750;
+    font-size: 1.5rem;
+    border-top: 1px solid #cbd5e1;
+    flex-shrink: 0;
+    position: relative;
+    bottom: 0;
+}
+
+/* 4. Contenido Principal (RECALCULADO) */
+.g7-main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden !important;
+    /* Restamos el Header, el Footer y los 32px de la barra de WP */
+    max-height: calc(100vh - 178px);
+}
+
+.g7-container {
+    width: 90%;
+    max-width: 1100px;
+    margin-top: -50px !important;
+    text-align: center;
+}
+
+/* --- TEXTOS Y TARJETAS (INTACTOS) --- */
+.g7-intro h1 {
+    font-size: 2.6rem;
+    margin: 0;
+    font-weight: 750;
+    margin-bottom: 15px;
+}
+
+.g7-intro p {
+    font-size: 1.2rem;
+    color: #475569;
+    margin: 15px 0 50px 0;
+}
+
+.g7-kicker {
+    display: block;
+    color: #4f46e5;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.g7-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px;
+}
+
+.g7-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #cbd5e1;
+    transition: all 0.3s ease;
+}
+
+.g7-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.g7-card__icon {
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.g7-card h2 {
+    font-size: 1.4rem;
+    margin: 5px 0;
+}
+
+.g7-btn {
+    display: block;
+    padding: 12px;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 10px;
+}
+
+.g7-card--tickets .g7-btn { background: #4f46e5; }
+.g7-card--video .g7-btn { background: #0891b2; }
+.g7-card--acceso .g7-btn { background: #e11d48 !important; }
