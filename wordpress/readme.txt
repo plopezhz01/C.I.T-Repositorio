@@ -1,15 +1,15 @@
 === Proyecto WordPress ===
 
-Nombre del proyecto: soporte tickets
-Autor: Nombre del autor o empresa
-Sitio web: https://ejemplo.com
-Versión inicial: 1.0.0
+Nombre del proyecto: C.I.P Tickets
+Autor: C.I.P
+Sitio web: https://192.168.31.84
+Versión inicial: 1.0
 Fecha de creación: 2026-02-09
 Licencia: GPLv2 o posterior
 
 == Descripción ==
 
-Este proyecto es una instalación de WordPress utilizada para el sitio web "Mi Sitio WordPress". 
+Este proyecto es una instalación de WordPress utilizada para el sitio web "C.I.P Support". 
 Incluye el núcleo de WordPress, un tema personalizado y varios plugins adicionales.
 
 == Estructura de carpetas ==
