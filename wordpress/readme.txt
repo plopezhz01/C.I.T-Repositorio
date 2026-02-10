@@ -1,4 +1,4 @@
-=== Proyecto WordPress ===
+=== Proyecto WordPress === Hola
 
 Nombre del proyecto: C.I.P Tickets
 Autor: C.I.P
