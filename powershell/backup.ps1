@@ -1,9 +1,4 @@
-#Comprobación de dependencias.
-$Dependencias = @("mysqldump", "aws")
-foreach ($dep in $Dependencias) {
-    if (-not (Get-Command $dep -ErrorAction SilentlyContinue)) { Write-Host "[ERROR] '$dep' no instalado o no en PATH" -ForegroundColor Red; Log-Accion "Dependencia $dep" "ERROR"; exit 1 }
-    else { Write-Host "[OK] Dependencia encontrada: $dep" -ForegroundColor Green; Log-Accion "Dependencia $dep" "OK" }
-}
+
 
 #Añadir lineas en fichero log.
 function Log-Accion {
@@ -20,6 +15,13 @@ function Log-CabeceraDump {
     Add-Content -Path $LOG_FILE -Value "Fichero : $ARCHIVO_SQL"
     Add-Content -Path $LOG_FILE -Value "Fecha de la copia de segu: $fecha"
     Add-Content -Path $LOG_FILE -Value "=================================================="
+}
+
+#Comprobación de dependencias.
+$Dependencias = @("mysqldump", "aws")
+foreach ($dep in $Dependencias) {
+    if (-not (Get-Command $dep -ErrorAction SilentlyContinue)) { Write-Host "[ERROR] '$dep' no instalado o no en PATH" -ForegroundColor Red; Log-Accion "Dependencia $dep" "ERROR"; exit 1 }
+    else { Write-Host "[OK] Dependencia encontrada: $dep" -ForegroundColor Green; Log-Accion "Dependencia $dep" "OK" }
 }
 
 # RUTAS ABSOLUTAS AWS
