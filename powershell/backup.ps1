@@ -17,7 +17,7 @@ function Log-CabeceraDump {
 }
 
 # -----------------------------
-# RUTAS ABSOLUTAS AWS
+# RUTAS ABSOLUTAS AWS comentario
 # -----------------------------
 $USER_HOME       = [Environment]::GetFolderPath("UserProfile")
 $AWS_DIR         = Join-Path $USER_HOME ".aws"

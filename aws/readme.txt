@@ -1,2 +1,2 @@
 Este fichero de aws, primero, tienes que tener el rds desplegado, ademas deberas crear un par de claves llamadas lock, o cambiar el nombre dentro del codigo. ejecutalo desde cloud formation, (configurar https a mano)
-editado desde vscode prueba
+editado desde vscode prueba prueba 2
