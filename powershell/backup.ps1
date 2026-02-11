@@ -1,145 +1,86 @@
-# -----------------------------
-# FUNCIONES LOG
-# -----------------------------
+$BACKUP_FOLDER = "C:\Backups"
+$LOG_FILE      = Join-Path $BACKUP_FOLDER "backups.log"
+$FECHA         = Get-Date -Format "yyyyMMdd_HHmmss"
+$ARCHIVO_SQL   = Join-Path $BACKUP_FOLDER "backup_$FECHA.sql"
+$ARCHIVO_ZIP   = "$ARCHIVO_SQL.zip"
+
+$RDS_HOST     = "soporte.cpick8cz8rta.us-east-1.rds.amazonaws.com"
+$RDS_USER     = "root"
+$RDS_DATABASE = "soporte"
+$RDS_PASSWORD = "Gruposiete"
+
+$S3_BUCKET = "backupwordpresssoporte"
+$S3_REGION = "us-east-1"
+$S3_PATH   = "s3://$S3_BUCKET/backups/backup_$FECHA.sql.zip"
+
 function Log-Accion {
     param([string]$Accion, [string]$Resultado)
     $hora = Get-Date -Format "HH:mm:ss"
     Add-Content -Path $LOG_FILE -Value "$hora - [$Accion] - [$Resultado]"
 }
 
-function Log-CabeceraDump {
-    $fecha = Get-Date -Format "yyyy-MM-dd"
+function Log-Cabecera {
     Add-Content -Path $LOG_FILE -Value ""
     Add-Content -Path $LOG_FILE -Value "=================================================="
-    Add-Content -Path $LOG_FILE -Value "Fichero : $ARCHIVO_SQL"
-    Add-Content -Path $LOG_FILE -Value "Fecha de la copia de segu: $fecha"
+    Add-Content -Path $LOG_FILE -Value "Backup BD MySQL"
+    Add-Content -Path $LOG_FILE -Value "Fecha: $(Get-Date)"
     Add-Content -Path $LOG_FILE -Value "=================================================="
 }
 
-# -----------------------------
-# RUTAS ABSOLUTAS AWS comentario
-# -----------------------------
-$USER_HOME       = [Environment]::GetFolderPath("UserProfile")
-$AWS_DIR         = Join-Path $USER_HOME ".aws"
-$AWS_CREDENTIALS = Join-Path $AWS_DIR "credentials"
-
-# Crear directorio y fichero si no existen
-if (-not (Test-Path $AWS_DIR)) { New-Item -ItemType Directory -Path $AWS_DIR | Out-Null; Log-Accion "AWS Setup" "Directorio .aws creado" }
-else { Log-Accion "AWS Setup" "Directorio .aws existe" }
-
-if (-not (Test-Path $AWS_CREDENTIALS)) { New-Item -ItemType File -Path $AWS_CREDENTIALS | Out-Null; Log-Accion "AWS Setup" "Fichero credentials creado" }
-else { Log-Accion "AWS Setup" "Fichero credentials existe" }
-
-# -----------------------------
-# COMPROBAR PERFIL DEFAULT AWS
-# -----------------------------
-$awsOk = $false
-aws s3 ls --profile default 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) { $awsOk = $true; Log-Accion "AWS Credentials" "Perfil default funcional"; Write-Host "[OK] Credenciales definidas." -ForegroundColor Green }
-else { Log-Accion "AWS Credentials" "Perfil default inválido o no funciona" }
-
-# -----------------------------
-# PEDIR CREDENCIALES SOLO SI FALLA
-# -----------------------------
-if (-not $awsOk) {
-    $AccessKey    = Read-Host "Introduce AWS Access Key"
-    $SecretKey    = Read-Host "Introduce AWS Secret Key"
-    $SessionToken = Read-Host "Introduce AWS Session Token (si aplica, si no dejar vacío)"
-
-    $content = (Get-Content $AWS_CREDENTIALS -Raw) -replace "(?ms)^\[default\].*?(?=^\[|\z)", ""
-
-    $newProfile = @"
-[default]
-aws_access_key_id = $AccessKey
-aws_secret_access_key = $SecretKey
-"@
-    if ($SessionToken) { $newProfile += "aws_session_token = $SessionToken`n" }
-    $newProfile += "region = us-east-1`n"
-
-    $finalContent = if ($content) { "$content`n`n$newProfile" } else { $newProfile }
-    Set-Content -Path $AWS_CREDENTIALS -Value $finalContent -Force
-    Log-Accion "AWS Credentials" "Perfil default insertado/actualizado"
-
-    aws s3 ls --profile default 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { Write-Host "[ERROR] Credenciales AWS inválidas" -ForegroundColor Red; exit 1 }
-    else { Write-Host "[OK] Credenciales AWS válidas" -ForegroundColor Green }
+if (-not (Test-Path $BACKUP_FOLDER)) {
+    New-Item -ItemType Directory -Path $BACKUP_FOLDER | Out-Null
 }
 
-# -----------------------------
-# PARÁMETROS INICIALES BACKUP
-# -----------------------------
-Write-Host "`n--Parámetros iniciales--"
-$userInput = Read-Host "Ingrese la ruta relativa o absoluta para guardar backups"
+if (-not (Test-Path $LOG_FILE)) {
+    New-Item -ItemType File -Path $LOG_FILE | Out-Null
+}
 
-# Convertir a ruta absoluta
-try { $BACKUP_FOLDER = Convert-Path $userInput -ErrorAction Stop } catch { $BACKUP_FOLDER = Join-Path (Get-Location) $userInput }
+Log-Cabecera
+Log-Accion "Inicio" "Script iniciado"
 
-$FECHA        = Get-Date -Format "yyyyMMdd_HHmmss"
-$LOG_FILE     = Join-Path $BACKUP_FOLDER "backups.log"
-$GLOBAL:ARCHIVO_SQL = Join-Path $BACKUP_FOLDER "backup_$FECHA.sql"
-$ARCHIVO_ZIP  = "$ARCHIVO_SQL.zip"
-
-# Crear directorio y log si no existen
-if (-not (Test-Path $BACKUP_FOLDER)) { New-Item -ItemType Directory -Path $BACKUP_FOLDER | Out-Null; Log-Accion "Crear directorio backup" "OK - $BACKUP_FOLDER" }
-if (-not (Test-Path $LOG_FILE)) { New-Item -Path $LOG_FILE -ItemType File | Out-Null }
-
-# -----------------------------
-# COMPROBAR DEPENDENCIAS
-# -----------------------------
 $Dependencias = @("mysqldump", "aws")
+
 foreach ($dep in $Dependencias) {
-    if (-not (Get-Command $dep -ErrorAction SilentlyContinue)) { Write-Host "[ERROR] '$dep' no instalado o no en PATH" -ForegroundColor Red; Log-Accion "Dependencia $dep" "ERROR"; exit 1 }
-    else { Write-Host "[OK] Dependencia encontrada: $dep" -ForegroundColor Green; Log-Accion "Dependencia $dep" "OK" }
+    if (-not (Get-Command $dep -ErrorAction SilentlyContinue)) {
+        Log-Accion "Dependencia $dep" "ERROR"
+        exit 1
+    }
+    Log-Accion "Dependencia $dep" "OK"
 }
 
-Log-CabeceraDump
-Log-Accion "Inicio script" "Backup iniciado"
+mysqldump `
+    --host=$RDS_HOST `
+    --user=$RDS_USER `
+    --password=$RDS_PASSWORD `
+    --routines --events --triggers `
+    --result-file=$ARCHIVO_SQL `
+    $RDS_DATABASE 2>$null
 
-# -----------------------------
-# DATOS RDS Y S3
-# -----------------------------
-$RDS_HOST     = "soporte.cpick8cz8rta.us-east-1.rds.amazonaws.com"
-$RDS_USER     = "root"
-$RDS_PASSWORD = "Gruposiete"
-$RDS_DATABASE = "soporte"
+if ($LASTEXITCODE -ne 0) {
+    Log-Accion "Dump BD" "ERROR"
+    exit 1
+}
+Log-Accion "Dump BD" "OK - $ARCHIVO_SQL"
 
-$S3_BUCKET    = "backupwordpresssoporte"
-$S3_REGION    = "us-east-1"
+Compress-Archive -Path $ARCHIVO_SQL -DestinationPath $ARCHIVO_ZIP -Force 2>$null
 
-# -----------------------------
-# PASO 1: BACKUP BD
-# -----------------------------
-Write-Host "`n[1/3] Haciendo dump..."
-mysqldump --host=$RDS_HOST --user=$RDS_USER --password=$RDS_PASSWORD --routines --events --triggers --result-file=$ARCHIVO_SQL $RDS_DATABASE 2>$null
+if (-not (Test-Path $ARCHIVO_ZIP)) {
+    Log-Accion "Compresión" "ERROR"
+    exit 1
+}
+Log-Accion "Compresión" "OK - $ARCHIVO_ZIP"
 
-if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Dump creado: $ARCHIVO_SQL" -ForegroundColor Green; Log-Accion "Dump BD" "OK - $ARCHIVO_SQL" }
-else { Write-Host "[ERROR] Error al hacer dump" -ForegroundColor Red; Log-Accion "Dump BD" "ERROR"; exit 1 }
+aws s3 cp $ARCHIVO_ZIP $S3_PATH --region $S3_REGION --only-show-errors *> $null
 
-# -----------------------------
-# PASO 2: COMPRIMIR
-# -----------------------------
-Write-Host "`n[2/3] Comprimiendo archivo..."
-Compress-Archive -Path $ARCHIVO_SQL -DestinationPath $ARCHIVO_ZIP -Force
-if (Test-Path $ARCHIVO_ZIP) { Write-Host "[OK] Archivo comprimido: $ARCHIVO_ZIP" -ForegroundColor Green; Log-Accion "Compresión" "OK - $ARCHIVO_ZIP" }
-else { Write-Host "[ERROR] Error al compimir" -ForegroundColor Red; Log-Accion "Compresión" "ERROR"; exit 1 }
+if ($LASTEXITCODE -ne 0) {
+    Log-Accion "Subida S3" "ERROR"
+    exit 1
+}
+Log-Accion "Subida S3" "OK - $S3_PATH"
 
-# -----------------------------
-# PASO 3: SUBIR A S3
-# -----------------------------
-Write-Host "`n[3/3] Subiendo a S3..."
-$s3_path = "s3://$S3_BUCKET/backups/backup_$FECHA.sql.zip"
-aws s3 cp $ARCHIVO_ZIP $s3_path --region $S3_REGION >$null 2>&1
-if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Backup subido a: $s3_path" -ForegroundColor Green; Log-Accion "Subida S3" "OK" }
-else { Write-Host "[ERROR] Error al subir a S3" -ForegroundColor Red; Log-Accion "Subida S3" "ERROR"; exit 1 }
+Remove-Item $ARCHIVO_ZIP -Force 2>$null
+Log-Accion "Limpieza local" "OK"
 
-# -----------------------------
-# PASO 4: LIMPIAR LOCALES
-# -----------------------------
-Remove-Item $ARCHIVO_ZIP -Force
-if (-not (Test-Path $ARCHIVO_ZIP)) { Write-Host "[OK] Archivo local eliminado" -ForegroundColor Green; Log-Accion "Limpieza local" "OK" }
-else { Write-Host "[ERROR] No se pudo eliminar archivo local" -ForegroundColor Red; Log-Accion "Limpieza local" "ERROR" }
-
-Log-Accion "Fin script" "Backup completado correctamente"
-Write-Host "`nBackup completado. Archivo: backup_$FECHA.sql.zip en $s3_path"
+Log-Accion "Fin" "Backup completado correctamente"
 
  
